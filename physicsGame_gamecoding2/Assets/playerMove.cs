@@ -1,161 +1,117 @@
+using System;
+using System.Collections;
+using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.InputSystem;
-using UnityEngine.Serialization;
-using UnityEngine.UI;
-
-public class playerMove : MonoBehaviour
+public class playerMove: MonoBehaviour
 {
+    [Header("Movement")]
     public float walkSpeed = 5;
-    public float runSpeed = 9;
+    public float runSpeed = 10;
+    private float jumpForce = 5f;
+    private bool jumpReady;
 
-    public float jumpHeight = 5;
+
     public Transform cameraTransform;
-    public float lookSensitivity = 1f;
+    public float lookSensitivity = 100f;
 
-    private CharacterController cc;
+    private Rigidbody rb;
 
     private Vector2 moveInput;
     private Vector2 lookInput;
-    private float verticalVelocity; //current upward/downward speed
-    private float gravity = -20f; //constant downard accleration
-    private float pitch; //up and down
-
-    //interaction variables
-    private GameObject currentTarget;
-    public Image reticleImage;
-    private bool interactPressed;
 
     private bool isRunning;
-    private bool isJumping;
 
-    // Start is called once before the first execution of Update after the MonoBehaviour is created
-    void Awake()
+    private float yaw;
+    private float pitch;
+
+    [Header("Ground Check")]
+    public LayerMask groundLayer;//what counts as grounding
+    public float groundCheckRadius = .5f;//size of sphere
+    public float groundCheckDistance = 0.5f;//how far down to check
+    public bool isGrounded;
+    public Transform groundCheck;
+
+
+    // Start is called before the first frame update
+    void Start()
     {
-        cc = GetComponent<CharacterController>();
+        //grab rigidbody off of played
+        rb = GetComponent<Rigidbody>();
 
-        //optional cursor locking
+        //optional lock cursor
         Cursor.lockState = CursorLockMode.Locked;
         Cursor.visible = false;
-
-        //find the reticle
-        reticleImage = GameObject.Find("Reticle").GetComponent<Image>();
-        reticleImage.color = new Color(0, 0, 0, .7f); //slightly transparent black
     }
 
     // Update is called once per frame
     void Update()
     {
-        HandleLook();
-        HandleMovement();
-        CheckInteract();
-        HandleInteract();
+        CameraLook();
+        CheckGround();
     }
 
-    private void HandleLook()
+    //fixed update is not every frame like Update, instead it runs at scheduled consistent intervals
+    //this is better for when we are doing phsyics
+    private void FixedUpdate()
     {
-        //horizontal mouse movement rotates player
-        float yaw = lookInput.x * lookSensitivity;
-        //vertical mouse movement rotates camera
-        float pitchDelta = lookInput.y * lookSensitivity;
-
-        transform.Rotate(Vector3.up * yaw);
-
-        //accumulate vertical rotation
-        pitch -= pitchDelta;
-        //clamp it so we dont flip upside down
-        pitch = Mathf.Clamp(pitch, -90, 90);
-
-        cameraTransform.localRotation = Quaternion.Euler(pitch, 0, 0);
-    }
-    private void HandleMovement()
-    {
-        //updating our bool to be true or false if the player is grounded
-        bool grounded = cc.isGrounded;
-        Debug.Log("is grounded: " + grounded);
-
-        //this keeps the cc snapped to the ground
-        if (grounded && verticalVelocity <= 0)
-        {
-            verticalVelocity = -2f;
-        }
-
-        float currentSpeed = walkSpeed;
-
-        //if running is true set the current speed to run speed
+        float currentSpeed;
+        //if running is true or false update the speed either to walk or run speed
         if (isRunning)
         {
             currentSpeed = runSpeed;
-        }//if it is false set it back to walk speed
+        }
         else
         {
             currentSpeed = walkSpeed;
         }
 
-        Vector3 move = transform.right * moveInput.x * currentSpeed + transform.forward * moveInput.y * currentSpeed;
+        //once current speed gets updated it sends it here
+        //movement math
+        Vector3 move = transform.forward * moveInput.y * currentSpeed +
+            transform.right * moveInput.x * currentSpeed;
 
-        //if jumping is true and we are grounded
-        if (isJumping && grounded)
+        //applying our move vector above to change our rigidbodies velocity
+        //keep velocity the same on the y
+        rb.linearVelocity = new Vector3(move.x, rb.linearVelocity.y, move.z);
+
+        //if jump ready is true (depending on our input)
+        //and the player is grounded
+        if (jumpReady && isGrounded)
         {
-            verticalVelocity = Mathf.Sqrt(jumpHeight * -2f * gravity);
+            //turn jump ready to false so we only jump once, it gets back updated to true in OnJump Function
+            jumpReady = false;
+            //add force to our rigidbody
+            rb.AddForce(Vector3.up * jumpForce, ForceMode.Impulse);
         }
-        else
-        {
-            isJumping = false;
-        }
-
-        //apply gravity to every frame
-        verticalVelocity += gravity * Time.deltaTime;
-
-        //convert vertical velocity into movement vector
-        Vector3 velocity = Vector3.up * verticalVelocity;
-        //now WE ARE FINALLY MOVING OUR PLAYER
-        cc.Move((move + velocity) * Time.deltaTime);
-
     }
 
-    void CheckInteract()
-    {
-        //reset reticle image to normal color first
-        if (reticleImage != null) reticleImage.color = new Color(0, 0, 0, .7f);
-        //make a ray that goes straight out of the camera(center of screen)
-        //players eyesight
-        Ray ray = new Ray(cameraTransform.position, cameraTransform.forward);
-        RaycastHit hit;
-        //asking unity if it hit something within 3 units
-        //hit stores what we hit like the collider
-        bool didHit = Physics.Raycast(ray, out hit, 3);
-        if (!didHit) return;//if we didn't hit anything start here
-        //if we hit something tagged interactable
-        if (hit.collider.CompareTag("Interactable"))
-        {
-            //store the object so we can destroy or do whatever when the player clicks
-            currentTarget = hit.collider.gameObject;
-            if (reticleImage != null)
-            {
-                reticleImage.color = Color.red;
-            }
-        }
-
-        Debug.DrawRay(cameraTransform.position, cameraTransform.forward * 3, Color.blue);
-    }
-
-    void HandleInteract()
-    {
-        //if the player did not press interact this frame do nothing
-        if (!interactPressed) return;
-        //consume the input so one click only triggers one interactions
-        //this changes next frame
-        interactPressed = false;
-        if (currentTarget == null) return;
-        Destroy(currentTarget);
-        //clear target reference after destroying
-        currentTarget = null;
-
-    }
-
+    //reads the value of our mouse as a vector2 (x,y) stores it into our moveinput var
     public void OnMove(InputAction.CallbackContext context)
     {
         moveInput = context.ReadValue<Vector2>();
+    }
+
+    void CameraLook()
+    {
+        //if we do not have a camera assigned, exit the function here (do not do the rest of it)
+        if (cameraTransform == null) return;
+
+        //take the input of our mouse on the x and y, multiples it by how fast we want our camera to move, multiply by framerate
+        float mouseX = lookInput.x * lookSensitivity * Time.deltaTime;
+        float mouseY = lookInput.y * lookSensitivity * Time.deltaTime;
+
+        // Horizontal rotation rotates the player body
+        //yaw means left to right
+        yaw += mouseX;
+        transform.rotation = Quaternion.Euler(0f, yaw, 0f);
+
+        // Vertical rotation rotates the camera only
+        //pitch means up to down
+        pitch -= mouseY;
+        pitch = Mathf.Clamp(pitch, -90f, 90f); // Prevent flipping
+
+        cameraTransform.localRotation = Quaternion.Euler(pitch, 0f, 0f);
     }
 
     public void OnLook(InputAction.CallbackContext context)
@@ -163,10 +119,11 @@ public class playerMove : MonoBehaviour
         lookInput = context.ReadValue<Vector2>();
     }
 
+    //if we press the jump button (space bar)
+    //then we want to set kump readu to true
     public void OnJump(InputAction.CallbackContext context)
     {
-        //if we are actually hitting the key is jumping equals true!
-        if (context.performed) isJumping = true;
+        if (context.performed) jumpReady = true;
     }
 
     public void OnSprint(InputAction.CallbackContext context)
@@ -174,13 +131,34 @@ public class playerMove : MonoBehaviour
         isRunning = context.ReadValueAsButton();
     }
 
-    public void OnInteract(InputAction.CallbackContext context)
+    private void CheckGround()
     {
-        if (context.performed) interactPressed = true;
+        if (groundCheck == null)
+        {
+            isGrounded = false;
+            return;
+        }
+
+        // Start the sphere slightly above the player's feet
+        Vector3 origin = transform.position + Vector3.up * 0.1f;
+
+        isGrounded = Physics.SphereCast(
+            groundCheck.position,
+            groundCheckRadius,
+            Vector3.down,
+            out RaycastHit hit,
+            groundCheckDistance,
+            groundLayer,
+            QueryTriggerInteraction.Ignore
+        );
+    }
+    private void OnDrawGizmosSelected()
+    {
+        // Visualize the end position of the spherecast
+        Vector3 end = groundCheck.position + Vector3.down * groundCheckDistance;
+
+        Gizmos.color = Color.yellow;
+        Gizmos.DrawWireSphere(end, groundCheckRadius);
     }
 
-    private void OnControllerColliderHit(ControllerColliderHit hit)
-    {
-        Debug.Log("CC Collided with: " + hit.gameObject.name);
-    }
 }
