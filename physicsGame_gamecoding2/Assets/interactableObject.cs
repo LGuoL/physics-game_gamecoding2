@@ -29,7 +29,7 @@ public class InteractableObject : MonoBehaviour
         }
     }
 
-    public void HighLight()
+    public void Highlight()
 
     {
         if (isHighLighted || objectRenderer == null)
@@ -42,7 +42,7 @@ public class InteractableObject : MonoBehaviour
         isHighLighted = true;
     }
 
-    public void UnhighLight()
+    public void Unhighlight()
     {
         if (!isHighLighted || objectRenderer == null) return;
         objectRenderer.material.color = originalColor;
