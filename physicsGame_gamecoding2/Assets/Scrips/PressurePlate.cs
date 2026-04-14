@@ -33,7 +33,8 @@ public class PressurePlate : MonoBehaviour
     Vector3 plateResetPos;
     Vector3 platePressedPos;
 
-    HashSet<PhysicsObject> objectsOnPlate = new HashSet<PhysicsObject>();
+    HashSet<PhysicsObjects> objectsOnPlate = new HashSet<PhysicsObjects>();
+    HashSet<PhysicsObjects> countedObjects = new HashSet<PhysicsObjects>();
 
     // Start is called once before the first execution of Update after the MonoBehaviour is created
     void Start()
@@ -51,53 +52,40 @@ public class PressurePlate : MonoBehaviour
     //we check for physics obj to get the weight
     private void OnTriggerEnter(Collider other)
     {
-        PhysicsObject physOb = other.GetComponent<PhysicsObject>();
+        PhysicsObjects physOb = other.GetComponent<PhysicsObjects>();
         if (physOb == null) return;
+        objectsOnPlate.Add(physOb);
 
-        if (physOb.isHeld) return; //so it doesnt go off when youre just holding it in the trigger area
-
-        //first simple version
-        /*currentWeight += physOb.puzzleWeight;
-        Debug.Log($"{other.gameObject.name} entered plate. total weight: {currentWeight}");
-        CheckActivation();*/
-
-        //this is instead adding it to a list at first just to make sure nothing gets double activated
-        //the above works too
-        if (objectsOnPlate.Add(physOb))
-        {
-            currentWeight += physOb.puzzleWeight;
-            CheckActivation();
-        }
 
     }
 
     private void OnTriggerStay(Collider other)
     {
-        PhysicsObject physicsObj = other.GetComponent<PhysicsObject>();
+        PhysicsObjects physicsObj = other.GetComponent<PhysicsObjects>();
         if (physicsObj == null) return;
 
-        //ifnore if still being held
-        if (physicsObj.isHeld) return;
-
-        if (objectsOnPlate.Add(physicsObj))
+        if (!physicsObj.isHeld && countedObjects.Add(physicsObj))
         {
-            currentWeight += physicsObj.puzzleWeight;
+            currentWeight += physicsObj.GetWeight();
             CheckActivation();
+            //Debug.Log()
         }
     }
 
     private void OnTriggerExit(Collider other)
     {
         if (isLocked) return;
-        PhysicsObject physicsObj = other.GetComponent<PhysicsObject>();
+        PhysicsObjects physicsObj = other.GetComponent<PhysicsObjects>();
         if (physicsObj == null) return;
 
-        if (objectsOnPlate.Remove(physicsObj))
+        if (countedObjects.Remove(physicsObj))
         {
-            currentWeight -= physicsObj.puzzleWeight;
+            currentWeight -= physicsObj.GetWeight();
             currentWeight = Mathf.Max(0f, currentWeight);
             CheckDeactivation();
         }
+
+        objectsOnPlate.Remove(physicsObj);
     }
 
 

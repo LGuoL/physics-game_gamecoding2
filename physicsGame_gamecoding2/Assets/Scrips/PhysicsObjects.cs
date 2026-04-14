@@ -1,6 +1,6 @@
 using UnityEngine;
 
-public class PhysicsObject : MonoBehaviour
+public class PhysicsObjects : MonoBehaviour
 {
     [Header("Mass and Motion")]
     //how heavy the obj is in kg, affects how much force is needed to move it
@@ -76,5 +76,12 @@ public class PhysicsObject : MonoBehaviour
     {
         //on validate runs in the editor whenever an inspector value changes
         if (rb != null) ApplyRigidbodySettings();
+    }
+
+    public float GetWeight()
+    {
+        if (puzzleWeight >= 0f) return puzzleWeight;
+
+        return mass;
     }
 }

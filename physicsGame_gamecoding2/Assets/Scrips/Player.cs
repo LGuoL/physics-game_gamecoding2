@@ -3,15 +3,15 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.InputSystem;
-public class playerMove: MonoBehaviour
+public class Player : MonoBehaviour
 {
     [Header("Movement")]
     public float walkSpeed = 5;
     public float runSpeed = 10;
     private float jumpForce = 5f;
     private bool jumpReady;
-
-
+    
+    
     public Transform cameraTransform;
     public float lookSensitivity = 100f;
 
@@ -24,7 +24,7 @@ public class playerMove: MonoBehaviour
 
     private float yaw;
     private float pitch;
-
+    
     [Header("Ground Check")]
     public LayerMask groundLayer;//what counts as grounding
     public float groundCheckRadius = .5f;//size of sphere
@@ -32,13 +32,18 @@ public class playerMove: MonoBehaviour
     public bool isGrounded;
     public Transform groundCheck;
 
+    [Header("Grenade")]
+    public GameObject grenadePrefab; // 手雷预制体
+    public Transform grenadeSpawnPoint; // 手雷生成位置
+    public float throwForce = 10f;
 
+    
     // Start is called before the first frame update
     void Start()
     {
         //grab rigidbody off of played
         rb = GetComponent<Rigidbody>();
-
+        
         //optional lock cursor
         Cursor.lockState = CursorLockMode.Locked;
         Cursor.visible = false;
@@ -68,9 +73,9 @@ public class playerMove: MonoBehaviour
 
         //once current speed gets updated it sends it here
         //movement math
-        Vector3 move = transform.forward * moveInput.y * currentSpeed +
+        Vector3 move = transform.forward * moveInput.y * currentSpeed + 
             transform.right * moveInput.x * currentSpeed;
-
+        
         //applying our move vector above to change our rigidbodies velocity
         //keep velocity the same on the y
         rb.linearVelocity = new Vector3(move.x, rb.linearVelocity.y, move.z);
@@ -96,7 +101,7 @@ public class playerMove: MonoBehaviour
     {
         //if we do not have a camera assigned, exit the function here (do not do the rest of it)
         if (cameraTransform == null) return;
-
+        
         //take the input of our mouse on the x and y, multiples it by how fast we want our camera to move, multiply by framerate
         float mouseX = lookInput.x * lookSensitivity * Time.deltaTime;
         float mouseY = lookInput.y * lookSensitivity * Time.deltaTime;
@@ -113,7 +118,7 @@ public class playerMove: MonoBehaviour
 
         cameraTransform.localRotation = Quaternion.Euler(pitch, 0f, 0f);
     }
-
+    
     public void OnLook(InputAction.CallbackContext context)
     {
         lookInput = context.ReadValue<Vector2>();
@@ -123,12 +128,27 @@ public class playerMove: MonoBehaviour
     //then we want to set kump readu to true
     public void OnJump(InputAction.CallbackContext context)
     {
-        if (context.performed) jumpReady = true;
+        if(context.performed) jumpReady = true;
     }
 
     public void OnSprint(InputAction.CallbackContext context)
     {
         isRunning = context.ReadValueAsButton();
+    }
+
+    public void OnThrowGrenade(InputAction.CallbackContext context)
+    {
+        if (!context.performed) return;
+
+        if (grenadePrefab != null && grenadeSpawnPoint != null)
+        {
+            GameObject grenade = Instantiate(grenadePrefab, grenadeSpawnPoint.position, grenadeSpawnPoint.rotation);
+            Rigidbody rb = grenade.GetComponent<Rigidbody>();
+            if (rb != null)
+            {
+                rb.AddForce(grenadeSpawnPoint.forward * throwForce, ForceMode.VelocityChange);
+            }
+        }
     }
 
     private void CheckGround()
@@ -160,5 +180,5 @@ public class playerMove: MonoBehaviour
         Gizmos.color = Color.yellow;
         Gizmos.DrawWireSphere(end, groundCheckRadius);
     }
-
+    
 }
