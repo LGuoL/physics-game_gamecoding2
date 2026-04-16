@@ -853,8 +853,8 @@ PlayerSettings:
   editorAssembliesCompatibilityLevel: 1
   m_RenderingPath: 1
   m_MobileRenderingPath: 1
-  metroPackageName: physicsGame_gamecoding2
-  metroPackageVersion: 
+  metroPackageName: physicsGamegamecoding2
+  metroPackageVersion: 1.0.0.0
   metroCertificatePath: 
   metroCertificatePassword: 
   metroCertificateSubject: 
@@ -862,7 +862,7 @@ PlayerSettings:
   metroCertificateNotAfter: 0000000000000000
   metroApplicationDescription: physicsGame_gamecoding2
   wsaImages: {}
-  metroTileShortName: 
+  metroTileShortName: physicsGame_gamecoding2
   metroTileShowName: 0
   metroMediumTileShowName: 0
   metroLargeTileShowName: 0
@@ -929,7 +929,7 @@ PlayerSettings:
   qnxGraphicConfPath: 
   apiCompatibilityLevel: 6
   captureStartupLogs: {}
-  activeInputHandler: 1
+  activeInputHandler: 2
   windowsGamepadBackendHint: 0
   cloudProjectId: c1c8aced-90c0-4ebe-b5b9-2bbf69c16c63
   framebufferDepthMemorylessMode: 0
